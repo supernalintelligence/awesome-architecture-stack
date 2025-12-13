@@ -185,6 +185,11 @@
   },
   "active": "21407985b40199a6",
   "lastOpenFiles": [
+    "stacks/compliance.md",
+    "stacks/testing.md",
+    "stacks/security.md",
+    "stacks/observability.md",
+    "ARCHITECTURE-REVIEW.md",
     "stacks/integration.md",
     "stacks/analytics.md",
     "stacks/content.md",

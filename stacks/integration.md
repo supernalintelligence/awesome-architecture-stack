@@ -743,5 +743,881 @@ const repos = await githubAPI.request('/user/repos', {
 
 ---
 
-(Continue in separate message for User Features section...)
+## 👥 User Features
+
+### 1. Integration Marketplace
+
+**What users see**: Browse, search, and install integrations
+
+```mermaid
+graph TB
+    Browse[Integration Marketplace] --> Search[Search/Filter]
+    Browse --> Featured[Featured Integrations]
+    Browse --> Categories[Categories]
+    
+    Search --> Detail[Integration Detail Page]
+    Featured --> Detail
+    Categories --> Detail
+    
+    Detail --> Preview[Preview/Screenshots]
+    Detail --> Reviews[User Reviews]
+    Detail --> Install[Install Button]
+    
+    Install --> Config[Configuration Screen]
+    Config --> OAuth[OAuth Flow]
+    Config --> APIKey[API Key Entry]
+    Config --> Test[Test Connection]
+    
+    Test --> Success[Connected ✓]
+    Test --> Error[Error Message]
+```
+
+**Implementation: Marketplace UI**
+
+```typescript
+// Integration marketplace component
+interface Integration {
+  id: string;
+  name: string;
+  provider: string;
+  category: 'productivity' | 'communication' | 'crm' | 'payments' | 'analytics';
+  description: string;
+  logo: string;
+  authType: 'oauth' | 'api_key' | 'basic';
+  features: string[];
+  pricing: 'free' | 'paid' | 'freemium';
+  rating: number;
+  installs: number;
+  verified: boolean;
+}
+
+const IntegrationMarketplace: React.FC = () => {
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [category, setCategory] = useState<string>('all');
+  const [search, setSearch] = useState<string>('');
+
+  useEffect(() => {
+    fetchIntegrations();
+  }, [category, search]);
+
+  const fetchIntegrations = async () => {
+    const response = await fetch('/api/integrations/marketplace', {
+      params: { category, search },
+    });
+    setIntegrations(await response.json());
+  };
+
+  return (
+    <div className="marketplace">
+      <header>
+        <h1>Integration Marketplace</h1>
+        <SearchBar value={search} onChange={setSearch} />
+      </header>
+
+      <aside>
+        <CategoryFilter
+          categories={['all', 'productivity', 'communication', 'crm', 'payments']}
+          active={category}
+          onChange={setCategory}
+        />
+      </aside>
+
+      <main>
+        <div className="integration-grid">
+          {integrations.map(integration => (
+            <IntegrationCard
+              key={integration.id}
+              integration={integration}
+              onInstall={() => handleInstall(integration)}
+            />
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+// Integration card component
+const IntegrationCard: React.FC<{ integration: Integration }> = ({ integration }) => {
+  return (
+    <div className="card">
+      <img src={integration.logo} alt={integration.name} />
+      
+      <div className="header">
+        <h3>{integration.name}</h3>
+        {integration.verified && <Badge>✓ Verified</Badge>}
+      </div>
+
+      <p>{integration.description}</p>
+
+      <div className="features">
+        {integration.features.slice(0, 3).map(feature => (
+          <Tag key={feature}>{feature}</Tag>
+        ))}
+      </div>
+
+      <div className="footer">
+        <div className="stats">
+          <Rating value={integration.rating} />
+          <span>{integration.installs.toLocaleString()} installs</span>
+        </div>
+        
+        <Button onClick={onInstall}>
+          {integration.pricing === 'paid' && '💰'} Install
+        </Button>
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+### 2. Connection Setup Flow
+
+**OAuth Configuration UI**
+
+```typescript
+// OAuth connection flow
+const OAuthSetup: React.FC<{ integration: Integration }> = ({ integration }) => {
+  const [step, setStep] = useState<'permissions' | 'connecting' | 'success'>('permissions');
+  const [scopes, setScopes] = useState<string[]>([]);
+
+  const handleConnect = async () => {
+    setStep('connecting');
+
+    // Open OAuth window
+    const authUrl = await fetch(`/api/connect/${integration.provider}`).then(r => r.text());
+    
+    const popup = window.open(
+      authUrl,
+      'oauth',
+      'width=600,height=700,scrollbars=yes'
+    );
+
+    // Listen for OAuth callback
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'oauth-success') {
+        popup?.close();
+        setStep('success');
+      } else if (event.data.type === 'oauth-error') {
+        popup?.close();
+        alert('Connection failed: ' + event.data.error);
+        setStep('permissions');
+      }
+    });
+  };
+
+  if (step === 'permissions') {
+    return (
+      <div className="oauth-setup">
+        <h2>Connect {integration.name}</h2>
+        
+        <p>This integration will be able to:</p>
+        
+        <ul className="permissions">
+          {integration.permissions.map(permission => (
+            <li key={permission}>
+              <Icon name="check" /> {permission}
+            </li>
+          ))}
+        </ul>
+
+        <div className="actions">
+          <Button variant="secondary" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleConnect}>
+            Continue to {integration.provider}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'connecting') {
+    return (
+      <div className="connecting">
+        <Spinner />
+        <p>Connecting to {integration.name}...</p>
+        <p className="hint">A popup window should open. Please allow popups for this site.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="success">
+      <Icon name="check-circle" size="large" color="green" />
+      <h2>Connected!</h2>
+      <p>{integration.name} is now connected to your account.</p>
+      <Button onClick={onClose}>Done</Button>
+    </div>
+  );
+};
+
+// API Key setup (alternative to OAuth)
+const APIKeySetup: React.FC<{ integration: Integration }> = ({ integration }) => {
+  const [apiKey, setApiKey] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleTest = async () => {
+    setTesting(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/integrations/test', {
+        method: 'POST',
+        body: JSON.stringify({
+          provider: integration.provider,
+          credentials: { apiKey },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      // Save on success
+      await fetch('/api/integrations/save', {
+        method: 'POST',
+        body: JSON.stringify({
+          provider: integration.provider,
+          credentials: { apiKey },
+        }),
+      });
+
+      onSuccess();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="api-key-setup">
+      <h2>Configure {integration.name}</h2>
+
+      <label>
+        API Key
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder="sk_live_..."
+        />
+        <a href={integration.docsUrl} target="_blank">
+          Where do I find my API key?
+        </a>
+      </label>
+
+      {error && (
+        <Alert variant="error">
+          <strong>Connection failed:</strong> {error}
+        </Alert>
+      )}
+
+      <div className="actions">
+        <Button variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleTest}
+          disabled={!apiKey || testing}
+        >
+          {testing ? 'Testing...' : 'Test Connection'}
+        </Button>
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+### 3. Active Integrations Dashboard
+
+**User's Connected Integrations**
+
+```typescript
+// Active integrations view
+const ActiveIntegrations: React.FC = () => {
+  const [connections, setConnections] = useState<Connection[]>([]);
+
+  useEffect(() => {
+    fetchConnections();
+  }, []);
+
+  const fetchConnections = async () => {
+    const response = await fetch('/api/integrations/connections');
+    setConnections(await response.json());
+  };
+
+  const handleDisconnect = async (connectionId: string) => {
+    if (!confirm('Are you sure you want to disconnect this integration?')) {
+      return;
+    }
+
+    await fetch(`/api/integrations/connections/${connectionId}`, {
+      method: 'DELETE',
+    });
+
+    setConnections(connections.filter(c => c.id !== connectionId));
+  };
+
+  const handleConfigure = (connection: Connection) => {
+    // Open configuration modal
+    openModal(<IntegrationConfig connection={connection} />);
+  };
+
+  return (
+    <div className="active-integrations">
+      <header>
+        <h1>Your Integrations</h1>
+        <Button onClick={() => navigate('/marketplace')}>
+          + Add Integration
+        </Button>
+      </header>
+
+      <div className="connections-list">
+        {connections.length === 0 ? (
+          <EmptyState
+            icon="plug"
+            title="No integrations yet"
+            description="Connect your favorite tools to sync data and automate workflows."
+            action={
+              <Button onClick={() => navigate('/marketplace')}>
+                Browse Marketplace
+              </Button>
+            }
+          />
+        ) : (
+          connections.map(connection => (
+            <ConnectionCard
+              key={connection.id}
+              connection={connection}
+              onDisconnect={() => handleDisconnect(connection.id)}
+              onConfigure={() => handleConfigure(connection)}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Connection card with status
+const ConnectionCard: React.FC<{
+  connection: Connection;
+  onDisconnect: () => void;
+  onConfigure: () => void;
+}> = ({ connection, onDisconnect, onConfigure }) => {
+  const statusColor = {
+    active: 'green',
+    error: 'red',
+    warning: 'yellow',
+  }[connection.status];
+
+  return (
+    <div className="connection-card">
+      <div className="header">
+        <img src={connection.integration.logo} alt={connection.integration.name} />
+        <div>
+          <h3>{connection.integration.name}</h3>
+          <span className={`status ${statusColor}`}>
+            {connection.status}
+          </span>
+        </div>
+      </div>
+
+      <div className="info">
+        <div>
+          <label>Connected Account</label>
+          <p>{connection.externalEmail || connection.externalId}</p>
+        </div>
+        
+        <div>
+          <label>Last Synced</label>
+          <p>{formatDistanceToNow(connection.lastSync)} ago</p>
+        </div>
+
+        <div>
+          <label>Data Synced</label>
+          <p>{connection.syncedRecords.toLocaleString()} records</p>
+        </div>
+      </div>
+
+      {connection.status === 'error' && (
+        <Alert variant="error">
+          <strong>Connection Error:</strong> {connection.errorMessage}
+          <Button size="small" onClick={() => retryConnection(connection.id)}>
+            Retry
+          </Button>
+        </Alert>
+      )}
+
+      <div className="actions">
+        <Button variant="ghost" onClick={onConfigure}>
+          Configure
+        </Button>
+        <Button variant="ghost" onClick={() => viewLogs(connection.id)}>
+          View Logs
+        </Button>
+        <Button variant="ghost" color="danger" onClick={onDisconnect}>
+          Disconnect
+        </Button>
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+### 4. Activity Logs & Debugging
+
+**View Integration Activity**
+
+```typescript
+// Activity logs for debugging
+const IntegrationLogs: React.FC<{ connectionId: string }> = ({ connectionId }) => {
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [filter, setFilter] = useState<'all' | 'success' | 'error'>('all');
+
+  useEffect(() => {
+    fetchLogs();
+    
+    // Real-time updates via SSE
+    const eventSource = new EventSource(`/api/integrations/${connectionId}/logs/stream`);
+    
+    eventSource.onmessage = (event) => {
+      const newLog = JSON.parse(event.data);
+      setLogs(prev => [newLog, ...prev]);
+    };
+
+    return () => eventSource.close();
+  }, [connectionId]);
+
+  const filteredLogs = logs.filter(log => {
+    if (filter === 'all') return true;
+    return log.status === filter;
+  });
+
+  return (
+    <div className="integration-logs">
+      <header>
+        <h2>Activity Logs</h2>
+        
+        <div className="filters">
+          <ButtonGroup>
+            <Button
+              active={filter === 'all'}
+              onClick={() => setFilter('all')}
+            >
+              All
+            </Button>
+            <Button
+              active={filter === 'success'}
+              onClick={() => setFilter('success')}
+            >
+              Success
+            </Button>
+            <Button
+              active={filter === 'error'}
+              onClick={() => setFilter('error')}
+            >
+              Errors
+            </Button>
+          </ButtonGroup>
+          
+          <Button onClick={() => exportLogs(logs)}>
+            Export CSV
+          </Button>
+        </div>
+      </header>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Event</th>
+            <th>Status</th>
+            <th>Details</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredLogs.map(log => (
+            <tr key={log.id} className={log.status}>
+              <td>{format(log.timestamp, 'PPpp')}</td>
+              <td>
+                <code>{log.eventType}</code>
+              </td>
+              <td>
+                <Badge color={log.status === 'success' ? 'green' : 'red'}>
+                  {log.status}
+                </Badge>
+              </td>
+              <td>
+                {log.status === 'error' ? (
+                  <span className="error">{log.errorMessage}</span>
+                ) : (
+                  <span>{log.summary}</span>
+                )}
+              </td>
+              <td>
+                <Button
+                  size="small"
+                  variant="ghost"
+                  onClick={() => viewDetails(log)}
+                >
+                  Details
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// Log detail modal
+const LogDetailModal: React.FC<{ log: LogEntry }> = ({ log }) => {
+  return (
+    <Modal title="Log Details" onClose={onClose}>
+      <div className="log-detail">
+        <section>
+          <h3>Event Information</h3>
+          <dl>
+            <dt>Timestamp</dt>
+            <dd>{log.timestamp.toISOString()}</dd>
+            
+            <dt>Event Type</dt>
+            <dd><code>{log.eventType}</code></dd>
+            
+            <dt>Status</dt>
+            <dd><Badge color={log.status}>{log.status}</Badge></dd>
+            
+            <dt>Duration</dt>
+            <dd>{log.duration}ms</dd>
+          </dl>
+        </section>
+
+        {log.request && (
+          <section>
+            <h3>Request</h3>
+            <CodeBlock language="json">
+              {JSON.stringify(log.request, null, 2)}
+            </CodeBlock>
+          </section>
+        )}
+
+        {log.response && (
+          <section>
+            <h3>Response</h3>
+            <CodeBlock language="json">
+              {JSON.stringify(log.response, null, 2)}
+            </CodeBlock>
+          </section>
+        )}
+
+        {log.errorStack && (
+          <section>
+            <h3>Error Stack Trace</h3>
+            <pre className="error-stack">{log.errorStack}</pre>
+          </section>
+        )}
+
+        <div className="actions">
+          {log.status === 'error' && (
+            <Button onClick={() => retryEvent(log.id)}>
+              Retry
+            </Button>
+          )}
+          <Button onClick={() => copyToClipboard(JSON.stringify(log, null, 2))}>
+            Copy JSON
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+```
+
+---
+
+### 5. Webhook Management UI
+
+**Configure Incoming Webhooks**
+
+```typescript
+// Webhook management interface
+const WebhookSettings: React.FC<{ connectionId: string }> = ({ connectionId }) => {
+  const [webhooks, setWebhooks] = useState<Webhook[]>([]);
+
+  const createWebhook = async (eventTypes: string[]) => {
+    const response = await fetch(`/api/integrations/${connectionId}/webhooks`, {
+      method: 'POST',
+      body: JSON.stringify({ eventTypes }),
+    });
+
+    const webhook = await response.json();
+    setWebhooks([...webhooks, webhook]);
+  };
+
+  return (
+    <div className="webhook-settings">
+      <h2>Webhooks</h2>
+      
+      <p>
+        Receive real-time updates when events occur in your connected service.
+      </p>
+
+      <div className="webhooks-list">
+        {webhooks.map(webhook => (
+          <WebhookCard key={webhook.id} webhook={webhook} />
+        ))}
+      </div>
+
+      <Button onClick={() => openCreateWebhookModal()}>
+        + Create Webhook
+      </Button>
+    </div>
+  );
+};
+
+const WebhookCard: React.FC<{ webhook: Webhook }> = ({ webhook }) => {
+  const [showSecret, setShowSecret] = useState(false);
+
+  return (
+    <div className="webhook-card">
+      <div className="header">
+        <h3>Webhook #{webhook.id.slice(0, 8)}</h3>
+        <Toggle
+          checked={webhook.enabled}
+          onChange={(enabled) => updateWebhook(webhook.id, { enabled })}
+        />
+      </div>
+
+      <div className="url">
+        <label>Webhook URL</label>
+        <CopyableCode>{webhook.url}</CopyableCode>
+      </div>
+
+      <div className="secret">
+        <label>Signing Secret</label>
+        <div className="secret-field">
+          <input
+            type={showSecret ? 'text' : 'password'}
+            value={webhook.secret}
+            readOnly
+          />
+          <Button
+            size="small"
+            onClick={() => setShowSecret(!showSecret)}
+          >
+            {showSecret ? 'Hide' : 'Show'}
+          </Button>
+          <Button
+            size="small"
+            onClick={() => copyToClipboard(webhook.secret)}
+          >
+            Copy
+          </Button>
+        </div>
+      </div>
+
+      <div className="events">
+        <label>Subscribed Events</label>
+        <div className="event-tags">
+          {webhook.eventTypes.map(event => (
+            <Tag key={event}>{event}</Tag>
+          ))}
+        </div>
+      </div>
+
+      <div className="stats">
+        <div>
+          <label>Deliveries (24h)</label>
+          <p>{webhook.deliveriesLast24h}</p>
+        </div>
+        <div>
+          <label>Success Rate</label>
+          <p>{webhook.successRate}%</p>
+        </div>
+        <div>
+          <label>Last Delivery</label>
+          <p>{formatDistanceToNow(webhook.lastDelivery)} ago</p>
+        </div>
+      </div>
+
+      <div className="actions">
+        <Button onClick={() => viewDeliveries(webhook.id)}>
+          View Deliveries
+        </Button>
+        <Button onClick={() => testWebhook(webhook.id)}>
+          Send Test Event
+        </Button>
+        <Button color="danger" onClick={() => deleteWebhook(webhook.id)}>
+          Delete
+        </Button>
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+## 🔗 Cross-Stack References
+
+### Integration Stack Interacts With:
+
+- **Auth Stack** → OAuth flows, API key storage
+- **Data Stack** → Cache API responses, store connection metadata
+- **Analytics Stack** → Track integration usage, monitor API calls
+- **Notification Stack** → Alert on integration failures
+- **Admin Stack** → Manage integrations, view all connections
+
+---
+
+## 📋 Implementation Checklist
+
+### System Features
+- [ ] OAuth 2.0 manager with state management
+- [ ] Webhook receiver with signature validation
+- [ ] API client with rate limiting & retries
+- [ ] Plugin architecture (hooks/sandboxing)
+- [ ] Data sync engine (incremental updates)
+- [ ] Error handling & circuit breakers
+- [ ] Connection health monitoring
+
+### User Features
+- [ ] Integration marketplace UI
+- [ ] OAuth/API key setup flows
+- [ ] Active integrations dashboard
+- [ ] Connection status & health checks
+- [ ] Activity logs with filtering
+- [ ] Webhook management interface
+- [ ] Test connection functionality
+- [ ] Export/import connection configs
+
+### Security & Compliance
+- [ ] Encrypted credential storage (Vault)
+- [ ] Webhook signature validation (HMAC)
+- [ ] Rate limit enforcement
+- [ ] Audit logging (all API calls)
+- [ ] Permission scopes (least privilege)
+- [ ] Token rotation (refresh tokens)
+
+### Monitoring & Debugging
+- [ ] Integration usage dashboards
+- [ ] Error rate tracking
+- [ ] Latency monitoring (P50, P95, P99)
+- [ ] Real-time log streaming (SSE)
+- [ ] Webhook delivery tracking
+- [ ] Failed request retry queue
+
+---
+
+## 🎯 Key Decisions
+
+### When to Build vs. Buy
+
+| Scenario | Recommendation |
+|----------|----------------|
+| **Standard OAuth providers** (Google, GitHub, Slack) | Use auth library (Passport.js, NextAuth) |
+| **Payment processing** | ALWAYS use Stripe/PayPal (PCI compliance) |
+| **Custom B2B integrations** | Build custom (unique requirements) |
+| **High-volume webhooks** | Build (control, cost) |
+| **Low-volume webhooks** | Consider Zapier/Make (faster) |
+
+### OAuth vs. API Keys
+
+| Use OAuth When | Use API Keys When |
+|----------------|-------------------|
+| User grants access to their data | Server-to-server communication |
+| Delegated authorization needed | No user involvement |
+| Token expiration/refresh important | Long-lived credentials OK |
+| Example: GitHub, Google, Slack | Example: Stripe, SendGrid, Twilio |
+
+### Webhook Security
+
+**ALWAYS**:
+- Validate signatures (HMAC-SHA256)
+- Use HTTPS only
+- Implement replay protection (timestamp checks)
+- Rate limit webhook endpoints
+- Return 2xx immediately (process async)
+
+**NEVER**:
+- Trust webhook payload without validation
+- Expose internal IDs in webhook URLs
+- Process synchronously (blocks response)
+
+---
+
+## 🚀 Getting Started
+
+### Quick Start: GitHub Integration
+
+```typescript
+// 1. Register OAuth app at github.com/settings/developers
+// 2. Add credentials to env
+process.env.GITHUB_CLIENT_ID = 'your_client_id';
+process.env.GITHUB_CLIENT_SECRET = 'your_client_secret';
+process.env.GITHUB_WEBHOOK_SECRET = 'your_webhook_secret';
+
+// 3. Initialize OAuth manager
+const oauth = new OAuthManager();
+oauth.registerProvider('github', {
+  clientId: process.env.GITHUB_CLIENT_ID,
+  clientSecret: process.env.GITHUB_CLIENT_SECRET,
+  authorizationEndpoint: 'https://github.com/login/oauth/authorize',
+  tokenEndpoint: 'https://github.com/login/oauth/access_token',
+  userInfoEndpoint: 'https://api.github.com/user',
+  callbackUrl: `${process.env.APP_URL}/api/auth/callback/github`,
+  scope: ['user', 'repo'],
+});
+
+// 4. Set up routes
+app.get('/connect/github', async (req, res) => {
+  const authUrl = await oauth.initiateFlow('github', req.user.id);
+  res.redirect(authUrl);
+});
+
+app.get('/api/auth/callback/github', async (req, res) => {
+  await oauth.handleCallback('github', req.query.code, req.query.state);
+  res.redirect('/settings/integrations?success=true');
+});
+
+// 5. Set up webhook handler
+app.post('/webhooks/github', async (req, res) => {
+  const response = await webhookHandler.receive(req);
+  res.status(response.status).send(response.body);
+});
+```
+
+---
+
+## 📚 Further Reading
+
+- [OAuth 2.0 Simplified](https://www.oauth.com/)
+- [Webhook Security Best Practices](https://webhooks.fyi/security/hmac)
+- [API Rate Limiting Strategies](https://blog.logrocket.com/rate-limiting-node-js/)
+- [Circuit Breaker Pattern](https://martinfowler.com/bliki/CircuitBreaker.html)
+- [Building a Plugin System](https://www.figma.com/blog/how-we-built-the-figma-plugin-system/)
+
+---
+
+**Integration Stack Complete** ✅
+
+This stack provides end-to-end guidance for:
+- Connecting to external services (OAuth, API keys)
+- Receiving real-time events (webhooks)
+- Building extensible plugin systems
+- Creating user-friendly integration experiences
 
