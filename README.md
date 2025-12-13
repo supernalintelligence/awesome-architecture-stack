@@ -8,33 +8,53 @@ Not just a list of technologies—a **decision framework** for understanding wha
 
 ### 1. By Horizontal Layers (Technology Stack)
 Build from bottom up - foundation to presentation:
-- **L1: Foundation** - Config, security, observability *(planned)*
-- **L2: Platform** - Compute, storage, queues *(planned)*
-- **L3: Data** - Caching, validation, schema *(planned)*
-- **L4: Integration** - APIs, real-time, plugins *(planned)*
-- **L5: Business** - Users, auth, billing, payments *(planned)*
-- **L6: Application** - State, logic, AI/ML *(planned)*
-- **L7: Presentation** - Frontend, design systems *(planned)*
+- **L1: Foundation** - Config, security, observability → See [Security Stack](stacks/security.md), [Observability Stack](stacks/observability.md)
+- **L2: Platform** - Compute, storage, queues → See [DevOps Stack](stacks/devops.md), [Data Stack](stacks/data.md)
+- **L3: Data** - Caching, validation, schema → See [Data Stack](stacks/data.md)
+- **L4: Integration** - APIs, real-time, plugins → See [Integration Stack](stacks/integration.md), [Developer Stack](stacks/developer.md)
+- **L5: Business** - Users, auth, billing, payments → See [Auth Stack](stacks/auth.md), [Payment Stack](stacks/payments.md)
+- **L6: Application** - State, logic, AI/ML → See [AI Stack](stacks/ai.md), [Automation Stack](stacks/automation.md)
+- **L7: Presentation** - Frontend, design systems → See [Performance Stack](stacks/performance.md)
 
 ### 2. By Vertical Stacks (Feature Domains)
 Build complete features end-to-end:
-- [Auth Stack](stacks/auth.md) - Identity, auth, sessions, permissions (L1→L7)
-- [Data Stack](stacks/data.md) - Storage, caching, APIs, validation (L2→L7)
-- [Payment Stack](stacks/payments.md) - Billing, metering, invoicing (L1→L7)
-- [Communication Stack](stacks/communication.md) - Real-time, messaging, notifications (L2→L7)
-- [Content Stack](stacks/content.md) - Storage, CDN, search, delivery (L2→L7)
-- [Analytics Stack](stacks/analytics.md) - Events, metrics, dashboards (L1→L7)
-- [AI Stack](stacks/ai.md) - Model hosting, inference, embeddings (L2→L7)
-- [Integration Stack](stacks/integrations.md) - External APIs, webhooks, plugins (L4→L7)
+
+#### Core Infrastructure (7 stacks)
+- [Auth Stack](stacks/auth.md) - Identity, OAuth, sessions, permissions
+- [Data Stack](stacks/data.md) - Storage, caching, validation, pipelines
+- [Content Stack](stacks/content.md) - Files, media, CDN, search
+- [Integration Stack](stacks/integration.md) - APIs, OAuth, webhooks, plugins
+- [Observability Stack](stacks/observability.md) - Logs, metrics, traces, alerts
+- [Security Stack](stacks/security.md) - Vulnerability scanning, secrets
+- [Testing Stack](stacks/testing.md) - Unit, integration, E2E, load tests
+
+#### Business & Product (7 stacks)
+- [Payment Stack](stacks/payments.md) - Billing, subscriptions, invoicing
+- [Analytics Stack](stacks/analytics.md) - Events, metrics, dashboards
+- [Compliance Stack](stacks/compliance.md) - HIPAA, SOC2, GDPR
+- [BI Stack](stacks/bi.md) - Data warehouse, reports, exports
+- [Experimentation Stack](stacks/experimentation.md) - A/B testing, feature flags
+- [Support Stack](stacks/support.md) - Help desk, tickets, knowledge base
+- [Notification Stack](stacks/notification.md) - Email, SMS, push, in-app
+
+#### AI & Communication (3 stacks)
+- [AI Stack](stacks/ai.md) - LLMs, embeddings, RAG, fine-tuning
+- [Communication Stack](stacks/communication.md) - WebSocket, real-time, chat
+- [Automation Stack](stacks/automation.md) - Workflows, rules, triggers
+
+#### Developer Experience (4 stacks)
+- [Developer Stack](stacks/developer.md) - API docs, SDKs, sandbox
+- [Admin Stack](stacks/admin.md) - Admin panels, background jobs
+- [DevOps Stack](stacks/devops.md) - CI/CD, IaC, deployments
+- [Performance Stack](stacks/performance.md) - APM, profiling, optimization
 
 ### 3. By Cross-Cutting Concerns
 Apply across all layers and stacks:
-- **Testing Strategy** *(planned)*
-- **Error Handling & Resilience** *(planned)*
-- **Performance Optimization** *(planned)*
-- **Security & Compliance** - See [SECURITY.md](../SECURITY.md)
-- **Developer Experience** *(planned)*
-- **Observability** *(planned)*
+- **Testing Strategy** → See [Testing Stack](stacks/testing.md)
+- **Security & Compliance** → See [Security Stack](stacks/security.md), [Compliance Stack](stacks/compliance.md)
+- **Performance Optimization** → See [Performance Stack](stacks/performance.md)
+- **Observability** → See [Observability Stack](stacks/observability.md)
+- **Developer Experience** → See [Developer Stack](stacks/developer.md), [DevOps Stack](stacks/devops.md)
 
 ---
 
@@ -43,22 +63,23 @@ Apply across all layers and stacks:
 Software architecture is a **matrix** of horizontal layers and vertical stacks:
 
 ```
-                  AUTH     DATA    PAYMENTS  CONTENT   AI/ML
-                  STACK    STACK   STACK     STACK     STACK
-                  │        │       │         │         │
-L7: Presentation  ├──UI────┼──UI───┼──UI─────┼──UI─────┼──UI──
-L6: Application   ├──State─┼──Logic┼──Logic──┼──Logic──┼──Logic
-L5: Business      ├──Users─┼───────┼──Billing┼─────────┼──────
-L4: Integration   ├──API───┼──API──┼──API────┼──CDN────┼──API─
-L3: Data         ├──Cache─┼──Valid┼──Meter──┼──Cache──┼──────
-L2: Platform     ├───────┼──DB───┼─────────┼──Storage┼──GPU──
-L1: Foundation   ├──Vault─┼──────┼──Secrets┼─────────┼──Logs─
+                  AUTH  DATA  PAYMENTS  AI    DEVOPS  SECURITY  COMPLIANCE
+                  │     │     │         │     │       │         │
+L7: Presentation  ✅    ✅    ✅        ✅    ✅      ✅        ✅
+L6: Application   ✅    ✅    ✅        ✅    ✅      ✅        ✅
+L5: Business      ✅    ✅    ✅        ✅    ✅      ✅        ✅
+L4: Integration   ✅    ✅    ✅        ✅    ✅      ✅        ✅
+L3: Data          ✅    ✅    ✅        ✅    ✅      ✅        ✅
+L2: Platform      ✅    ✅    ✅        ✅    ✅      ✅        ✅
+L1: Foundation    ✅    ✅    ✅        ✅    ✅      ✅        ✅
+
+                  + 14 more complete stacks (21 total)
 ```
 
 **Choose your path:**
-- **Horizontal (Layers)**: "I need to choose a database" → Data Layer *(see [Data Stack](stacks/data.md))*
+- **Horizontal (Layers)**: "I need to choose a database" → [Data Stack](stacks/data.md)
 - **Vertical (Stacks)**: "I'm building authentication" → [Auth Stack](stacks/auth.md)
-- **Cross-Cutting**: "How do I test this?" → Testing *(planned)*
+- **Cross-Cutting**: "How do I test this?" → [Testing Stack](stacks/testing.md)
 
 ---
 
@@ -85,24 +106,40 @@ Each document follows this structure:
 2. Then [Data Stack](stacks/data.md) - Store their data
 3. Then [Payment Stack](stacks/payments.md) - Monetize
 4. Then [Analytics Stack](stacks/analytics.md) - Understand usage
+5. Then [Notification Stack](stacks/notification.md) - Keep users engaged
+6. Then [Support Stack](stacks/support.md) - Help customers
 
 ### Path 2: Building an API Platform
-1. Start with Integration Layer - API design *(planned)*
+1. Start with [Integration Stack](stacks/integration.md) - API design
 2. Then [Data Stack](stacks/data.md) - Data storage & access
 3. Then [Auth Stack](stacks/auth.md) - API authentication
-4. Then [Analytics Stack](stacks/analytics.md) - Track usage
+4. Then [Developer Stack](stacks/developer.md) - API docs & SDKs
+5. Then [Observability Stack](stacks/observability.md) - Monitor usage
+6. Then [Analytics Stack](stacks/analytics.md) - Track usage
 
 ### Path 3: Building an AI-Powered App
 1. Start with [AI Stack](stacks/ai.md) - Model infrastructure
 2. Then [Data Stack](stacks/data.md) - Training & inference data
 3. Then [Auth Stack](stacks/auth.md) - User access control
 4. Then [Payment Stack](stacks/payments.md) - Usage-based billing
+5. Then [Performance Stack](stacks/performance.md) - Optimize latency
+6. Then [Compliance Stack](stacks/compliance.md) - Data privacy
 
 ### Path 4: Building a Content Platform
 1. Start with [Content Stack](stacks/content.md) - Storage & CDN
 2. Then [Data Stack](stacks/data.md) - Metadata & search
 3. Then [Auth Stack](stacks/auth.md) - Access control
 4. Then [Analytics Stack](stacks/analytics.md) - Content metrics
+5. Then [Notification Stack](stacks/notification.md) - Content alerts
+6. Then [Support Stack](stacks/support.md) - User support
+
+### Path 5: Enterprise B2B SaaS
+1. Start with [Auth Stack](stacks/auth.md) - SSO, RBAC
+2. Then [Compliance Stack](stacks/compliance.md) - SOC2, HIPAA
+3. Then [Security Stack](stacks/security.md) - Vulnerability management
+4. Then [Observability Stack](stacks/observability.md) - Production monitoring
+5. Then [BI Stack](stacks/bi.md) - Customer analytics
+6. Then [Integration Stack](stacks/integration.md) - Enterprise integrations
 
 ---
 

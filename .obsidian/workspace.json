@@ -20,8 +20,21 @@
               "icon": "lucide-file",
               "title": "README"
             }
+          },
+          {
+            "id": "6bf5a8ef97514325",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.10.6"
+              },
+              "icon": "lucide-book-up",
+              "title": "Release Notes 1.10.6"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -183,8 +196,17 @@
       "bases:Create new base": false
     }
   },
-  "active": "21407985b40199a6",
+  "active": "6bf5a8ef97514325",
   "lastOpenFiles": [
+    "stacks/automation.md",
+    "stacks/experimentation.md",
+    "stacks/performance.md",
+    "stacks/admin.md",
+    "stacks/developer.md",
+    "stacks/bi.md",
+    "stacks/support.md",
+    "stacks/notification.md",
+    "stacks/devops.md",
     "stacks/compliance.md",
     "stacks/testing.md",
     "stacks/security.md",

@@ -452,3 +452,4 @@ tenant_2_db → users, posts, orders
 **Last Updated**: 2025-12-12  
 **Contribute**: Found a better auth pattern? [Open a PR](../CONTRIBUTING.md)
 
+
