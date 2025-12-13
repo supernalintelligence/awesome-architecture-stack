@@ -149,5 +149,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 **Last Updated**: 2025-12-13  
 **Status**: ✅ **100% COMPLETE** (21/21 stacks)  
-**GitHub**: https://github.com/ianderrington/awesome-architecture-stack  
-**License**: CC0 (Public Domain)
+**GitHub**: https://github.com/supernalintelligence/awesome-architecture-stack  
+**License**: MIT (Copyright © 2025 Supernal Intelligence)

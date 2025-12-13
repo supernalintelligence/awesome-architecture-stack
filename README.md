@@ -1270,9 +1270,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-CC0 1.0 Universal (Public Domain)
+MIT License - Copyright (c) 2025 Supernal Intelligence
 
-You can copy, modify, distribute this guide without asking permission.
+You can copy, modify, distribute, and use commercially. Just keep the copyright notice.
 
 ---
 
