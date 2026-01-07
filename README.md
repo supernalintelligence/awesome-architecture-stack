@@ -2,7 +2,7 @@
 
 > A comprehensive guide to every architectural decision you need to make when building software systems.
 
-Not just a list of technologies—a **decision framework** for understanding what problems each layer solves and why it matters.
+A **decision framework** for understanding what problems each layer solves and why it matters.
 
 ## Two Ways to Navigate
 
